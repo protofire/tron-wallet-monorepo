@@ -59,17 +59,29 @@ const TronLinkModule = (chainId: Chain['chainId'], rpcUri: Chain['rpcUri']): Wal
           throw new Error('TronLink extension not found. Please install TronLink.')
         }
 
+        const waitForAddress = async (maxAttempts = 10): Promise<void> => {
+          for (let i = 0; i < maxAttempts; i++) {
+            // Re-read from window.tronWeb in case the reference was updated
+            const tw = window.tronLink?.tronWeb || window.tronWeb
+            if (tw?.ready && tw?.defaultAddress?.hex) return
+            await new Promise((r) => setTimeout(r, 300))
+          }
+        }
+
         if (!tronWeb.ready || !tronWeb.defaultAddress?.hex) {
           // Request connection
           try {
             await tronLink.request({ method: 'tron_requestAccounts' })
+            await waitForAddress()
           } catch (error) {
             throw new Error(translateTronError(error, currentChainId))
           }
         }
 
         const getAddress = (): string => {
-          const addr = tronWeb.defaultAddress?.hex
+          // Re-read from window in case tronWeb reference was refreshed after connection
+          const tw = window.tronLink?.tronWeb || window.tronWeb
+          const addr = tw?.defaultAddress?.hex || tronWeb.defaultAddress?.hex
           if (!addr) throw new Error('TronLink not connected')
           // Convert Tron hex (41-prefixed) to 0x format
           return '0x' + addr.slice(2)
@@ -135,6 +147,7 @@ const TronLinkModule = (chainId: Chain['chainId'], rpcUri: Chain['rpcUri']): Wal
               eth_accounts: async () => [getAddress() as `0x${string}`],
               eth_requestAccounts: async () => {
                 await tronLink.request({ method: 'tron_requestAccounts' })
+                await waitForAddress()
                 return [getAddress() as `0x${string}`]
               },
 
