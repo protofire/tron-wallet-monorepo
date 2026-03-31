@@ -1,3 +1,4 @@
+import { isTronChain } from '@/utils/tron'
 import { ImplementationVersionState } from '@safe-global/store/gateway/types'
 import { POLLING_INTERVAL } from '@/config/constants'
 import { safeCreationDispatch, SafeCreationEvent } from './safeCreationEvents'
@@ -146,6 +147,17 @@ async function retryGetTransaction(provider: Provider, txHash: string, maxAttemp
   throw new Error('Transaction not found')
 }
 
+async function waitForTronReceipt(provider: Provider, txHash: string, maxAttempts = 40) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const receipt = await provider.getTransactionReceipt(txHash)
+    if (receipt !== null) {
+      return receipt
+    }
+    await delay(3000)
+  }
+  throw new Error('Tron transaction receipt not found after polling')
+}
+
 export const checkSafeActivation = async (
   provider: Provider,
   txHash: string,
@@ -155,13 +167,17 @@ export const checkSafeActivation = async (
   startBlock?: number,
 ) => {
   try {
-    const txResponse = await retryGetTransaction(provider, txHash)
-
-    const replaceableTx = startBlock ? txResponse.replaceableTransaction(startBlock) : txResponse
-    const receipt = await replaceableTx?.wait(1)
+    let receipt
+    if (isTronChain(chainId)) {
+      receipt = await waitForTronReceipt(provider, txHash)
+    } else {
+      const txResponse = await retryGetTransaction(provider, txHash)
+      const replaceableTx = startBlock ? txResponse.replaceableTransaction(startBlock) : txResponse
+      receipt = await replaceableTx?.wait(1)
+    }
 
     /** The receipt should always be non-null as we require 1 confirmation */
-    if (receipt === null) {
+    if (receipt === null || receipt === undefined) {
       throw new Error('Transaction should have a receipt, but got null instead.')
     }
 

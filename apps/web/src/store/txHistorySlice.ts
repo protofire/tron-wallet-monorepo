@@ -75,19 +75,19 @@ export const txHistoryListener = (listenerMiddleware: typeof listenerMiddlewareI
 
         const [pendingTxId, pendingTx] = pendingTxByNonce
 
-        if (pendingTxId === txId) {
+        {
           const txHash = 'txHash' in pendingTx ? pendingTx.txHash : undefined
+          // Dispatch SUCCESS whether txIds match or not — the nonce match confirms
+          // the transaction was executed. On Tron (and occasionally on Ethereum),
+          // the pending txId format may differ from the history txId.
           txDispatch(TxEvent.SUCCESS, {
             nonce: pendingTx.nonce,
-            txId,
+            txId: pendingTxId,
             chainId: pendingTx.chainId,
             safeAddress: pendingTx.safeAddress,
-            groupKey: pendingTxs[txId].groupKey,
+            groupKey: pendingTxs[pendingTxId]?.groupKey,
             txHash,
           })
-        } else {
-          // There is a pending tx with the same nonce as a history tx but their txIds don't match
-          listenerApi.dispatch(clearPendingTx({ txId: pendingTxId }))
         }
       }
     },

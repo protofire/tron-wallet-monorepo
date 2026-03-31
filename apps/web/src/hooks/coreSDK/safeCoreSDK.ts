@@ -1,3 +1,4 @@
+import { isTronChain } from '@/utils/tron'
 import chains from '@safe-global/utils/config/chains'
 import { getSafeL2SingletonDeployments, getSafeSingletonDeployments } from '@safe-global/safe-deployments'
 import ExternalStore from '@safe-global/utils/services/ExternalStore'
@@ -99,6 +100,31 @@ export const initSafeSDK = async ({
     safeVersion,
     contractNetworks,
   })
+
+  // Tron: Protocol Kit can't resolve Tron deployment addresses from safe-deployments
+  // because our patched networkAddresses use deployment keys that the SDK doesn't handle.
+  // Provide explicit contractNetworks with all Tron contract addresses.
+  if (isTronChain(chainId)) {
+    const tronDeployments: Record<string, Record<string, Record<string, string>>> =
+      require('@/../tron-deployments.json')
+    const chainContracts = tronDeployments[chainId]?.['1.4.1']
+    if (chainContracts) {
+      contractNetworks = {
+        ...contractNetworks,
+        [chainId]: {
+          ...contractNetworks?.[chainId],
+          safeSingletonAddress: chainContracts.safe_l2 || chainContracts.safe,
+          safeProxyFactoryAddress: chainContracts.safe_proxy_factory,
+          multiSendAddress: chainContracts.multi_send,
+          multiSendCallOnlyAddress: chainContracts.multi_send_call_only,
+          fallbackHandlerAddress: chainContracts.compatibility_fallback_handler,
+          signMessageLibAddress: chainContracts.sign_message_lib,
+          createCallAddress: chainContracts.create_call,
+          simulateTxAccessorAddress: chainContracts.simulate_tx_accessor,
+        },
+      }
+    }
+  }
 
   if (undeployedSafe) {
     if (isPredictedSafeProps(undeployedSafe.props) || isReplayedSafeProps(undeployedSafe.props)) {

@@ -1,3 +1,4 @@
+import { isTronChain } from '@/utils/tron'
 import { didRevert, type EthersError } from '@/utils/ethers-utils'
 
 import { txDispatch, TxEvent } from '@/services/tx/txEvents'
@@ -15,6 +16,32 @@ export function _getRemainingTimeout(defaultTimeout: number, submittedAt?: numbe
   const timeSinceSubmission = submittedAt !== undefined ? Date.now() - submittedAt : 0
 
   return Math.max(timeoutInMs - timeSinceSubmission, 1)
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Poll for transaction receipt on Tron.
+ * ethers.js provider.on('block') and TransactionResponse.wait() don't work
+ * reliably on Tron because Tron's nonce/block semantics differ from Ethereum.
+ */
+async function waitForTronReceipt(
+  provider: JsonRpcProvider,
+  txHash: string,
+  maxAttempts = 40,
+): Promise<TransactionReceipt | null> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const receipt = await provider.getTransactionReceipt(txHash)
+      if (receipt !== null) {
+        return receipt
+      }
+    } catch {
+      // getTransactionReceipt may fail on Tron; keep polling
+    }
+    await delay(3000)
+  }
+  return null
 }
 
 // Provider must be passed as an argument as it is undefined until initialised by `useInitWeb3`
@@ -86,17 +113,27 @@ export const waitForTx = async (
 
         clearInterval(interval)
 
-        const receipt = await SimpleTxWatcher.getInstance().watchTxHash(
-          safeTx.txHash,
-          walletAddress,
-          walletNonce,
-          provider,
-        )
-        processReceipt(receipt, txIds)
+        if (isTronChain(chainId)) {
+          const receipt = await waitForTronReceipt(provider, safeTx.txHash)
+          processReceipt(receipt, txIds)
+        } else {
+          const receipt = await SimpleTxWatcher.getInstance().watchTxHash(
+            safeTx.txHash,
+            walletAddress,
+            walletNonce,
+            provider,
+          )
+          processReceipt(receipt, txIds)
+        }
       }, POLLING_INTERVAL)
     } else {
-      const receipt = await SimpleTxWatcher.getInstance().watchTxHash(txHash, walletAddress, walletNonce, provider)
-      processReceipt(receipt, txIds)
+      if (isTronChain(chainId)) {
+        const receipt = await waitForTronReceipt(provider, txHash)
+        processReceipt(receipt, txIds)
+      } else {
+        const receipt = await SimpleTxWatcher.getInstance().watchTxHash(txHash, walletAddress, walletNonce, provider)
+        processReceipt(receipt, txIds)
+      }
     }
   } catch (error) {
     processError(error, txIds)
