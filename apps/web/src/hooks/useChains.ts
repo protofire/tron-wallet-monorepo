@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
 import { type Chain } from '@safe-global/store/gateway/AUTO_GENERATED/chains'
-import { useGetChainsConfigV2Query } from '@safe-global/store/gateway'
+import { useGetChainsConfigQuery } from '@safe-global/store/gateway'
 import useChainId from './useChainId'
 import type { FEATURES } from '@safe-global/utils/utils/chains'
 import { hasFeature } from '@safe-global/utils/utils/chains'
 import { getRtkQueryErrorMessage } from '@/utils/rtkQuery'
-import { CONFIG_SERVICE_KEY } from '@/config/constants'
 
 const useChains = (): { configs: Chain[]; error?: string; loading?: boolean } => {
-  const { data, error, isLoading } = useGetChainsConfigV2Query(CONFIG_SERVICE_KEY)
+  const { data, error, isLoading } = useGetChainsConfigQuery()
 
   const configs = useMemo(() => {
     if (!data) return []
@@ -29,7 +28,7 @@ const useChains = (): { configs: Chain[]; error?: string; loading?: boolean } =>
 export default useChains
 
 export const useChain = (chainId: string): Chain | undefined => {
-  const { data } = useGetChainsConfigV2Query(CONFIG_SERVICE_KEY)
+  const { data } = useGetChainsConfigQuery()
 
   return useMemo(() => {
     if (!data) return undefined

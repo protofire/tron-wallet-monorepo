@@ -9,7 +9,7 @@ import {
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux'
 import { useEffect } from 'react'
 import merge from 'lodash/merge'
-import { IS_PRODUCTION, CONFIG_SERVICE_KEY } from '@/config/constants'
+import { IS_PRODUCTION } from '@/config/constants'
 import { getPreloadedState, persistState } from './persistStore'
 import { broadcastState, listenToBroadcast } from './broadcast'
 import {
@@ -165,11 +165,11 @@ const getStaticChainsPreloadedState = (): Partial<RootState> | undefined => {
   return {
     [cgwClient.reducerPath]: {
       queries: {
-        [`getChainsConfigV2("${CONFIG_SERVICE_KEY}")`]: {
+        ['getChainsConfig(undefined)']: {
           status: 'fulfilled' as const,
-          endpointName: 'getChainsConfigV2' as const,
+          endpointName: 'getChainsConfig' as const,
           requestId: `static-chains-${Date.now()}`,
-          originalArgs: CONFIG_SERVICE_KEY,
+          originalArgs: undefined,
           startedTimeStamp: Date.now(),
           data: chainsAdapter.setAll(chainsInitialState, staticChainsData),
           fulfilledTimeStamp: Date.now(),
@@ -252,7 +252,7 @@ export const getStoreInstance = () => {
  * Trigger a background refetch of chain configurations so the app picks up any
  * changes since the build-time snapshot. The static chain data is already seeded
  * into the RTK Query cache via preloadedState in makeStore(), so
- * useGetChainsConfigV2Query() returns data immediately on first render.
+ * useGetChainsConfigQuery() returns data immediately on first render.
  *
  * When the runtime response arrives, RTK Query's structuralSharing preserves object
  * references if the data is identical, preventing unnecessary re-renders.
@@ -262,7 +262,7 @@ export const useInitStaticChains = () => {
 
   useEffect(() => {
     const result = dispatch(
-      apiSliceWithChainsConfig.endpoints.getChainsConfigV2.initiate(CONFIG_SERVICE_KEY, { forceRefetch: true }),
+      apiSliceWithChainsConfig.endpoints.getChainsConfig.initiate(undefined, { forceRefetch: true }),
     )
 
     return result.unsubscribe

@@ -33,9 +33,8 @@ const getBaseUrl = (): string => {
  * @param serviceKey - Service key for scoping chain features
  * @returns Promise with results array of Chain objects
  */
-export const getChainsConfig = async (serviceKey: string): Promise<{ results: Chain[] }> => {
-  const url = new URL('/v2/chains', getBaseUrl())
-  url.searchParams.set('serviceKey', serviceKey)
+export const getChainsConfig = async (): Promise<{ results: Chain[] }> => {
+  const url = new URL('/v1/chains', getBaseUrl())
   const response = await fetch(url.toString())
 
   if (!response.ok) {
