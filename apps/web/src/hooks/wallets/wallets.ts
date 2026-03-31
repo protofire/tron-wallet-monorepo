@@ -7,6 +7,8 @@ import walletConnect from '@web3-onboard/walletconnect'
 import pkModule from '@/services/private-key-module'
 import { ledgerModule } from '@/services/onboard/ledger-module'
 import { trezorModule } from '@/services/onboard/trezor/module'
+import tronlinkModule from '@/services/onboard/tronlink-module'
+import { isTronChain } from '@/utils/tron'
 
 import { CGW_NAMES, WALLET_KEYS } from './consts'
 
@@ -44,6 +46,7 @@ const WALLET_MODULES: Partial<{ [_key in WALLET_KEYS]: (chain: Chain) => WalletI
   [WALLET_KEYS.LEDGER]: () => ledgerModule(),
   [WALLET_KEYS.TREZOR]: () => trezorModule(),
   [WALLET_KEYS.PK]: (chain) => pkModule(chain.chainId, chain.rpcUri) as WalletInit,
+  [WALLET_KEYS.TRONLINK]: (chain) => tronlinkModule(chain.chainId, chain.rpcUri) as WalletInit,
 }
 
 export const getAllWallets = (chain: Chain): WalletInits => {
@@ -56,6 +59,11 @@ export const isWalletSupported = (disabledWallets: string[], walletLabel: string
 }
 
 export const getSupportedWallets = (chain: Chain): WalletInits => {
+  if (isTronChain(chain.chainId)) {
+    const tronModule = WALLET_MODULES[WALLET_KEYS.TRONLINK]?.(chain)
+    return tronModule ? [tronModule] : []
+  }
+
   const enabledWallets = Object.entries(WALLET_MODULES).filter(([key]) => isWalletSupported(chain.disabledWallets, key))
 
   if (enabledWallets.length === 0) {
