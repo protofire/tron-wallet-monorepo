@@ -9,7 +9,7 @@ import {
   isTransactionListItem,
 } from '@/utils/transaction-guards'
 import { txDispatch, TxEvent } from '@/services/tx/txEvents'
-import { clearPendingTx, selectPendingTxs } from './pendingTxsSlice'
+import { selectPendingTxs } from './pendingTxsSlice'
 import { makeLoadableSlice } from './common'
 import { selectSafeInfo } from './slices'
 import { cgwApi } from '@safe-global/store/gateway/AUTO_GENERATED/owners'
@@ -70,8 +70,6 @@ export const txHistoryListener = (listenerMiddleware: typeof listenerMiddlewareI
             }
           }
         }
-
-        const txId = result.transaction.id
 
         const [pendingTxId, pendingTx] = pendingTxByNonce
 

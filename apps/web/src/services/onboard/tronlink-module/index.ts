@@ -75,7 +75,7 @@ const TronLinkModule = (chainId: Chain['chainId'], rpcUri: Chain['rpcUri']): Wal
           return '0x' + addr.slice(2)
         }
 
-        const rpcUrl = getRpcServiceUrl(rpcUri as Parameters<typeof getRpcServiceUrl>[0])
+        const _rpcUrl = getRpcServiceUrl(rpcUri as Parameters<typeof getRpcServiceUrl>[0])
         const chainChangedListeners = new Set<(chainId: string) => void>()
 
         // Import and create viem-transport backed provider

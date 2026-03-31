@@ -105,8 +105,10 @@ export const initSafeSDK = async ({
   // because our patched networkAddresses use deployment keys that the SDK doesn't handle.
   // Provide explicit contractNetworks with all Tron contract addresses.
   if (isTronChain(chainId)) {
-    const tronDeployments: Record<string, Record<string, Record<string, string>>> =
-      require('@/../tron-deployments.json')
+    const tronDeployments: Record<
+      string,
+      Record<string, Record<string, string>>
+    > = require('@/../tron-deployments.json')
     const chainContracts = tronDeployments[chainId]?.['1.4.1']
     if (chainContracts) {
       contractNetworks = {

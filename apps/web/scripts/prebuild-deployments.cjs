@@ -21,9 +21,7 @@ const TRON_CHAINS = {
 
 // Try to load tron-deployments from local copy
 function loadDeploymentsConfig() {
-  const paths = [
-    path.resolve(__dirname, '../tron-deployments.json'),
-  ]
+  const paths = [path.resolve(__dirname, '../tron-deployments.json')]
 
   for (const p of paths) {
     if (fs.existsSync(p)) {
@@ -52,16 +50,14 @@ function findAllSafeDeploymentsAssetDirs() {
   const { execSync } = require('child_process')
   const rootDir = path.join(process.cwd(), '..', '..')
   try {
-    const result = execSync(
-      `find ${rootDir}/node_modules -path "*/safe-deployments/dist/assets" -type d 2>/dev/null`,
-      { encoding: 'utf8', timeout: 10000 }
-    )
+    const result = execSync(`find ${rootDir}/node_modules -path "*/safe-deployments/dist/assets" -type d 2>/dev/null`, {
+      encoding: 'utf8',
+      timeout: 10000,
+    })
     return result.trim().split('\n').filter(Boolean)
   } catch (e) {
     // Fallback to known locations
-    return [
-      findNodeModulesPath('@safe-global/safe-deployments', path.join('dist', 'assets')),
-    ].filter(Boolean)
+    return [findNodeModulesPath('@safe-global/safe-deployments', path.join('dist', 'assets'))].filter(Boolean)
   }
 }
 
@@ -74,52 +70,52 @@ function patchSafeDeployments(config) {
   }
 
   console.log(`  Found ${assetsDirs.length} safe-deployments location(s):`)
-  assetsDirs.forEach(d => console.log(`    - ${d}`))
+  assetsDirs.forEach((d) => console.log(`    - ${d}`))
 
   let patchCount = 0
 
   for (const assetsBaseDir of assetsDirs) {
-  for (const [chainId, versions] of Object.entries(config)) {
-    for (const [version, contracts] of Object.entries(versions)) {
-      const versionDir = path.join(assetsBaseDir, `v${version}`)
+    for (const [chainId, versions] of Object.entries(config)) {
+      for (const [version, contracts] of Object.entries(versions)) {
+        const versionDir = path.join(assetsBaseDir, `v${version}`)
 
-      if (!fs.existsSync(versionDir)) {
-        continue
-      }
-
-      for (const [contractKey, address] of Object.entries(contracts)) {
-        const assetFile = path.join(versionDir, `${contractKey}.json`)
-
-        if (!fs.existsSync(assetFile)) {
+        if (!fs.existsSync(versionDir)) {
           continue
         }
 
-        const asset = JSON.parse(fs.readFileSync(assetFile, 'utf8'))
+        for (const [contractKey, address] of Object.entries(contracts)) {
+          const assetFile = path.join(versionDir, `${contractKey}.json`)
 
-        if (!asset.networkAddresses) {
-          asset.networkAddresses = {}
-        }
-
-        // Add to deployments with a chain-specific key
-        const deploymentKey = `tron_${chainId}`
-        if (asset.deployments) {
-          asset.deployments[deploymentKey] = {
-            address,
-            codeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-            deploymentType: 'custom',
+          if (!fs.existsSync(assetFile)) {
+            continue
           }
+
+          const asset = JSON.parse(fs.readFileSync(assetFile, 'utf8'))
+
+          if (!asset.networkAddresses) {
+            asset.networkAddresses = {}
+          }
+
+          // Add to deployments with a chain-specific key
+          const deploymentKey = `tron_${chainId}`
+          if (asset.deployments) {
+            asset.deployments[deploymentKey] = {
+              address,
+              codeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+              deploymentType: 'custom',
+            }
+          }
+
+          // networkAddresses maps chainId to a deployment key (not raw address).
+          // safe-deployments' mapJsonToDeploymentsFormatV1 resolves deployments[key].address
+          asset.networkAddresses[chainId] = deploymentKey
+
+          fs.writeFileSync(assetFile, JSON.stringify(asset, null, 2))
+          patchCount++
+          console.log(`  Patched ${contractKey}.json: chain ${chainId} -> ${address}`)
         }
-
-        // networkAddresses maps chainId to a deployment key (not raw address).
-        // safe-deployments' mapJsonToDeploymentsFormatV1 resolves deployments[key].address
-        asset.networkAddresses[chainId] = deploymentKey
-
-        fs.writeFileSync(assetFile, JSON.stringify(asset, null, 2))
-        patchCount++
-        console.log(`  Patched ${contractKey}.json: chain ${chainId} -> ${address}`)
       }
     }
-  }
   } // end for assetsDirs
 
   return patchCount
