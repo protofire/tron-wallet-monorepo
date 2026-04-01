@@ -23,7 +23,7 @@ const SafeInfo = (): ReactElement => {
   const settings = useAppSelector(selectSettings)
 
   const name = addressBookItem?.name || ens
-  const { displayAddress, shortAddress: tronShort, copyAddress, isTron } = useTronAddress(safeAddress)
+  const { displayAddress, copyAddress, isTron } = useTronAddress(safeAddress)
   const prefix = chain?.shortName
   const copyPrefix = isTron ? false : settings.shortName.copy
 
