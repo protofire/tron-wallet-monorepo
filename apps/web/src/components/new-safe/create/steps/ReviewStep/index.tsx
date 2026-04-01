@@ -252,10 +252,14 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
       setIsCreating(true)
 
       // Figure out the shared available nonce across chains
-      const nextAvailableNonce =
-        data.saltNonce !== undefined
-          ? data.saltNonce.toString()
-          : await getAvailableSaltNonce(customRPCs, { ...newSafeProps, saltNonce: '0' }, data.networks, knownAddresses)
+      // Always validate — even user-provided nonces may collide with existing deployments
+      const startingNonce = (data.saltNonce ?? 0).toString()
+      const nextAvailableNonce = await getAvailableSaltNonce(
+        customRPCs,
+        { ...newSafeProps, saltNonce: startingNonce },
+        data.networks,
+        knownAddresses,
+      )
 
       const replayedSafeWithNonce = { ...newSafeProps, saltNonce: nextAvailableNonce }
 
@@ -263,7 +267,7 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
       const provider = createWeb3ReadOnly(chain, customRpcUrl)
       if (!provider) return
 
-      const safeAddress = await predictAddressBasedOnReplayData(replayedSafeWithNonce, provider)
+      const safeAddress = await predictAddressBasedOnReplayData(replayedSafeWithNonce, provider, chain.chainId)
 
       const createSafeResults: CreateSafeResult[] = []
       for (const network of data.networks) {
