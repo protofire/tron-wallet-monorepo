@@ -26,8 +26,11 @@ const toNetworkAddressList = (addresses: string | string[]) => (Array.isArray(ad
 type DeploymentRecord = Record<string, { address: string; codeHash: string }>
 
 const SAFE_L2_CODE_HASHES = new Set<string>(
-  (_SAFE_L2_DEPLOYMENTS as SingletonDeploymentJSON[]).flatMap((deployment) =>
-    Object.values(deployment.deployments as DeploymentRecord).map(({ codeHash }) => codeHash.toLowerCase()),
+  (_SAFE_L2_DEPLOYMENTS as SingletonDeploymentJSON[]).flatMap(
+    (deployment) =>
+      Object.values(deployment.deployments as DeploymentRecord)
+        .map(({ codeHash }) => codeHash?.toLowerCase())
+        .filter(Boolean) as string[],
   ),
 )
 

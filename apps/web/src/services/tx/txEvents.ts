@@ -40,7 +40,7 @@ interface TxEvents {
   [TxEvent.SIGNATURE_PROPOSED]: { txId: string; nonce: number; signerAddress: string } & SafeContext
   [TxEvent.SIGNATURE_INDEXED]: { txId: string }
   [TxEvent.ONCHAIN_SIGNATURE_REQUESTED]: Id
-  [TxEvent.ONCHAIN_SIGNATURE_SUCCESS]: Id
+  [TxEvent.ONCHAIN_SIGNATURE_SUCCESS]: Id & SafeContext
   [TxEvent.NESTED_SAFE_TX_CREATED]: Id &
     SafeContext & {
       parentSafeAddress: string

@@ -78,6 +78,9 @@ const usePendingSafeStatus = (): void => {
   usePendingSafeMonitor()
 
   // Clear undeployed safe state if already deployed
+  // Also re-check when undeployedSafes changes (self-correcting for stuck states)
+  const isMarkedUndeployed = !!undeployedSafes[safe.chainId]?.[safeAddress]
+
   useEffect(() => {
     if (!provider || !safeAddress) return
 
@@ -94,7 +97,7 @@ const usePendingSafeStatus = (): void => {
     }
 
     checkDeploymentStatus()
-  }, [safe.chainId, dispatch, provider, safeAddress])
+  }, [safe.chainId, dispatch, provider, safeAddress, isMarkedUndeployed])
 
   // Subscribe to pending safe statuses
   useEffect(() => {
