@@ -65,8 +65,9 @@ export const useAddressActivity = (
           // Only add result if the address has low activity
           activityResults[address] = txCount < ACTIVITY_THRESHOLD_LOW ? LowActivityAnalysisResult : undefined
         } catch (err) {
-          console.error(`Address activity analysis error for ${address}:`, err)
-          throw err
+          // Tron /jsonrpc does not support eth_getTransactionCount — skip activity analysis.
+          console.warn(`Address activity analysis unavailable for ${address}:`, err)
+          activityResults[address] = undefined
         }
       }),
     )

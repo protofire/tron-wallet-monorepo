@@ -57,7 +57,9 @@ export const getUserNonce = async (userAddress: string): Promise<number> => {
   if (!web3) return -1
   try {
     return await web3.getTransactionCount(userAddress, 'pending')
-  } catch (error) {
-    return Promise.reject(error)
+  } catch {
+    // Tron /jsonrpc does not support eth_getTransactionCount (no nonce concept).
+    // Return 0 as a safe default — nonce is only used for speed-up tracking.
+    return 0
   }
 }

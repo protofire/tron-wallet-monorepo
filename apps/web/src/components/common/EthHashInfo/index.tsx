@@ -6,6 +6,7 @@ import { useAppSelector } from '@/store'
 import { selectSettings } from '@/store/settingsSlice'
 import { getBlockExplorerLink } from '@safe-global/utils/utils/chains'
 import SrcEthHashInfo, { type EthHashInfoProps } from './SrcEthHashInfo'
+import useTronAddress from '@/hooks/useTronAddress'
 
 const EthHashInfo = ({
   showName = true,
@@ -16,7 +17,10 @@ const EthHashInfo = ({
   const currentChainId = useChainId()
   const chain = useChain(props.chainId || currentChainId)
   const addressBookItem = useAddressBookItem(props.address, chain?.chainId)
-  const link = chain && props.hasExplorer ? getBlockExplorerLink(chain, props.address) : undefined
+  // Use base58 address for Tron block explorer links (Tronscan expects base58)
+  const { copyAddress: explorerAddress, isTron } = useTronAddress(props.address, chain?.chainId)
+  const link =
+    chain && props.hasExplorer ? getBlockExplorerLink(chain, isTron ? explorerAddress : props.address) : undefined
   const name = showName ? addressBookItem?.name || props.name : undefined
 
   return (
@@ -24,6 +28,7 @@ const EthHashInfo = ({
       prefix={chain?.shortName}
       copyPrefix={settings.shortName.copy}
       {...props}
+      chainId={chain?.chainId}
       name={name}
       addressBookNameSource={props.addressBookNameSource || addressBookItem?.source}
       customAvatar={props.customAvatar}

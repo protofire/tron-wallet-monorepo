@@ -11,6 +11,8 @@ import inputCss from '@/styles/inputs.module.css'
 import { isValidAddress } from '@safe-global/utils/utils/validation'
 import { sameAddress } from '@safe-global/utils/utils/addresses'
 import { useMergedAddressBooks } from '@/hooks/useAllAddressBooks'
+import useChainId from '@/hooks/useChainId'
+import { isTronChain, toTronBase58Sync } from '@/utils/tron'
 
 const abFilterOptions = createFilterOptions({
   stringify: (option: { label: string; name: string }) => option.name + ' ' + option.label,
@@ -26,6 +28,8 @@ const AddressBookInput = ({ name, canAdd, ...props }: AddressInputProps & { canA
 
   const { setValue, control } = useFormContext()
   const addressValue = useWatch({ name, control })
+  const chainId = useChainId()
+  const isTron = isTronChain(chainId)
 
   const allAddressBookEntries = useMemo(
     () =>
@@ -71,6 +75,12 @@ const AddressBookInput = ({ name, canAdd, ...props }: AddressInputProps & { canA
         render={({ field: { ref, ...field } }) => (
           <Autocomplete
             {...field}
+            // For Tron: display base58 in the input while form stores 0x
+            inputValue={
+              isTron && field.value?.startsWith('0x') && field.value.length === 42
+                ? toTronBase58Sync(field.value)
+                : (field.value ?? '')
+            }
             className={inputCss.input}
             disableClearable
             disabled={props.disabled}

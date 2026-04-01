@@ -9,6 +9,7 @@ import { FiatBalance } from './FiatBalance'
 import { PromoButtons } from './PromoButtons'
 import { getBlockExplorerLink } from '@safe-global/utils/utils/chains'
 import { useCurrentChain } from '@/hooks/useChains'
+import useTronAddress from '@/hooks/useTronAddress'
 import css from './styles.module.css'
 
 interface AssetRowContentProps {
@@ -34,7 +35,8 @@ export const AssetRowContent = ({
 }: AssetRowContentProps): ReactElement => {
   const isNative = isNativeToken(item.tokenInfo)
   const currentChain = useCurrentChain()
-  const explorerLink = !isNative && currentChain ? getBlockExplorerLink(currentChain, item.tokenInfo.address) : null
+  const { copyAddress: tokenExplorerAddr } = useTronAddress(item.tokenInfo.address)
+  const explorerLink = !isNative && currentChain ? getBlockExplorerLink(currentChain, tokenExplorerAddr) : null
 
   return (
     <Box className={css.mobileAssetRow}>

@@ -15,6 +15,14 @@ import {
   incrementByGasMultiplier,
   getGasLimitForZkSync as getGasLimitForZkSyncUtil,
 } from '@safe-global/utils/hooks/coreSDK/gasLimitUtils'
+import { isTronChain } from '@/utils/tron'
+
+/**
+ * Default gas limit for Tron chains (display only).
+ * Tron /jsonrpc returns unreliable results for eth_estimateGas.
+ * The actual energy/bandwidth limits are handled by viem-transport.
+ */
+const TRON_DEFAULT_GAS_LIMIT = 50_000n
 
 const useGasLimit = (
   safeTx?: SafeTransaction,
@@ -36,6 +44,12 @@ const useGasLimit = (
 
   const [gasLimit, gasLimitError, gasLimitLoading] = useAsync<bigint | undefined>(async () => {
     if (!safeAddress || !walletAddress || !safeSDK || !web3ReadOnly || !safeTx) return
+
+    // Tron /jsonrpc does not support reliable eth_estimateGas.
+    // Return a display-only default; viem-transport handles actual energy limits.
+    if (isTronChain(currentChainId)) {
+      return TRON_DEFAULT_GAS_LIMIT
+    }
 
     const encodedSafeTx = getEncodedSafeTx(
       safeSDK,
