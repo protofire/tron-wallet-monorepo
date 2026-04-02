@@ -7,8 +7,8 @@ export function useIsCounterfactualEnabled(): boolean | undefined {
   const chainId = useChainId()
   const hasFeature = useHasFeature(FEATURES.COUNTERFACTUAL)
 
-  // Tron CREATE2 formula differs from Ethereum — Protocol Kit address prediction
-  // will mismatch. Disable counterfactual Safe creation for Tron chains.
+  // Tron counterfactual flow is not ready yet — the dashboard can't reliably
+  // load undeployed Safe info before CGW indexes it, causing redirect loops.
   if (isTronChain(chainId)) return false
 
   return hasFeature

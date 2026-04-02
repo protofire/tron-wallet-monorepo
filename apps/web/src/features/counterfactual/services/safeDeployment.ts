@@ -147,13 +147,20 @@ async function retryGetTransaction(provider: Provider, txHash: string, maxAttemp
   throw new Error('Transaction not found')
 }
 
-async function waitForTronReceipt(provider: Provider, txHash: string, maxAttempts = 40) {
+async function waitForTronReceipt(provider: Provider, txHash: string, maxAttempts = 60) {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const receipt = await provider.getTransactionReceipt(txHash)
-    if (receipt !== null) {
-      return receipt
+    try {
+      const receipt = await provider.getTransactionReceipt(txHash)
+      if (receipt !== null) {
+        return receipt
+      }
+    } catch {
+      // Silently retry on errors (rate-limiting 429, CORS failures, network hiccups).
+      // TronGrid may return 429 without CORS headers, which the browser surfaces
+      // as a generic fetch failure — retrying after a delay resolves it.
     }
-    await delay(3000)
+    // Back off: 3s base, increasing to 6s after 10 attempts
+    await delay(attempt < 10 ? 3000 : 6000)
   }
   throw new Error('Tron transaction receipt not found after polling')
 }

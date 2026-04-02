@@ -54,7 +54,7 @@ export type SettingsState = {
     blindSigning: boolean
   }
   transactionExecution: boolean
-  tronAddressFormat: 'base58' | 'hex'
+  tronAddressFormat?: 'base58' | 'hex'
 }
 
 export const initialState: SettingsState = {

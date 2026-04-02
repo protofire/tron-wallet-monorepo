@@ -103,20 +103,23 @@ export const useFlowActivationGuard: UseGuard = () => {
 
     const isSpacesPath = pathname.startsWith('/spaces')
     const isOnboardingRoute = ONBOARDING_ROUTES.some((route) => pathname.startsWith(route))
-    return evaluateGuard(
-      {
-        pathname,
-        query,
-        isPublicRoute: !isOnboardingRoute && !isSpaceRoute && !isSpacesPath,
-        isOnboardingRoute,
-        isSpacesPath,
-        isWalletReady,
-        isSiweAuthenticated,
-        hasSpaces,
-        isPartOfSpaceUrl,
-      },
-      guardRules,
-    )
+    const isPublicRoute = !isOnboardingRoute && !isSpaceRoute && !isSpacesPath
+    const ctx = {
+      pathname,
+      query,
+      isPublicRoute,
+      isOnboardingRoute,
+      isSpacesPath,
+      isWalletReady,
+      isSiweAuthenticated,
+      hasSpaces,
+      isPartOfSpaceUrl,
+    }
+    const result = evaluateGuard(ctx, guardRules)
+    if (!result.success) {
+      console.warn('[RouterGuard] REDIRECT', { from: pathname, to: result.redirectTo, ctx })
+    }
+    return result
   }, [pathname, query, isReady, isWalletReady, isSiweAuthenticated, isStoreHydrated, fetchSpaces])
 
   return {

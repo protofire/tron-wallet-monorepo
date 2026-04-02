@@ -50,7 +50,9 @@ const WALLET_MODULES: Partial<{ [_key in WALLET_KEYS]: (chain: Chain) => WalletI
 }
 
 export const getAllWallets = (chain: Chain): WalletInits => {
-  return Object.values(WALLET_MODULES).map((module) => module(chain))
+  // Use chain-aware filtering so Tron chains only get TronLink
+  // and non-Tron chains don't get TronLink
+  return getSupportedWallets(chain)
 }
 
 export const isWalletSupported = (disabledWallets: string[], walletLabel: string): boolean => {

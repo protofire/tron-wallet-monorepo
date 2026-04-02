@@ -10,6 +10,7 @@ import { trackEvent, WALLET_EVENTS, MixpanelEventParams } from '@/services/analy
 import { useAppSelector, useAppDispatch } from '@/store'
 import { selectRpc } from '@/store/settingsSlice'
 import { formatAmount } from '@safe-global/utils/utils/formatNumber'
+import { isTronChain } from '@/utils/tron'
 import { localItem } from '@/services/local-storage/local'
 import { isWalletConnect, isWalletUnlocked } from '@/utils/wallets'
 import { setUnauthenticated } from '@/store/authSlice'
@@ -62,7 +63,12 @@ export const getConnectedWallet = (wallets: WalletState[]): ConnectedWallet | nu
     if (Number.isNaN(balanceNumber)) {
       balance = balanceString
     } else {
-      const balanceFormatted = formatAmount(balanceNumber)
+      // web3-onboard always formats balances assuming 18 decimals (ETH).
+      // For Tron (6 decimals), the displayed value is 10^12 times too small.
+      // Re-scale: multiply by 10^(18-6) = 10^12 to get the correct value.
+      const chainId = Number(primaryWallet.chains[0]?.id).toString(10)
+      const correctedBalance = isTronChain(chainId) ? balanceNumber * 1e12 : balanceNumber
+      const balanceFormatted = formatAmount(correctedBalance)
       balance = `${balanceFormatted} ${token}`
     }
   }
@@ -150,9 +156,15 @@ export const switchWallet = async (onboard: OnboardAPI) => {
 
 const lastWalletStorage = localItem<string>('lastWallet')
 
-const connectLastWallet = async (onboard: OnboardAPI) => {
+const connectLastWallet = async (onboard: OnboardAPI, chain: Chain) => {
   const lastWalletLabel = lastWalletStorage.get()
   if (lastWalletLabel) {
+    // Don't auto-connect a wallet that is incompatible with the current chain.
+    // For Tron chains, only TronLink is supported; for non-Tron chains, TronLink is not supported.
+    const isTron = isTronChain(chain.chainId)
+    const isTronWallet = lastWalletLabel === 'TronLink'
+    if (isTron !== isTronWallet) return
+
     const isUnlocked = await isWalletUnlocked(lastWalletLabel)
 
     if (isUnlocked === true || isUnlocked === undefined) {
@@ -193,7 +205,7 @@ export const useInitOnboard = () => {
 
     enableWallets().then(async () => {
       // Reconnect last wallet and mark wallet provider as ready
-      await connectLastWallet(onboard)
+      await connectLastWallet(onboard, chain)
 
       setWalletReady(true)
     })

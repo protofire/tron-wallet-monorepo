@@ -35,9 +35,27 @@ import {
   Safe_proxy_factory__factory,
   Safe_to_l2_setup__factory,
 } from '@safe-global/utils/types/contracts'
-import { createWeb3 } from '@/hooks/wallets/web3'
+import { createWeb3, getRpcServiceUrl } from '@/hooks/wallets/web3'
 import { hasMultiChainCreationFeatures } from '@/features/multichain'
 import { getLatestSafeVersion } from '@safe-global/utils/utils/chains'
+import { isTronChain } from '@/utils/tron'
+import type { ContractNetworksConfig } from '@safe-global/protocol-kit'
+
+const getTronContractNetworks = (chainId: string): ContractNetworksConfig | undefined => {
+  if (!isTronChain(chainId)) return undefined
+  const tronDeployments: Record<string, Record<string, Record<string, string>>> = require('@/../tron-deployments.json')
+  const chainContracts = tronDeployments[chainId]?.['1.4.1']
+  if (!chainContracts) return undefined
+  return {
+    [chainId]: {
+      safeSingletonAddress: chainContracts.safe_l2 || chainContracts.safe,
+      safeProxyFactoryAddress: chainContracts.safe_proxy_factory,
+      multiSendAddress: chainContracts.multi_send,
+      multiSendCallOnlyAddress: chainContracts.multi_send_call_only,
+      fallbackHandlerAddress: chainContracts.compatibility_fallback_handler,
+    },
+  }
+}
 
 // Type for the lazy-loaded activateReplayedSafe function
 export type ActivateReplayedSafeFn = (
@@ -69,13 +87,34 @@ export const createNewSafe = async (
 ): Promise<void> => {
   let txResponse: TransactionResponse
   if (isPredictedSafeProps(undeployedSafeProps)) {
-    const safe = await Safe.init({
-      predictedSafe: undeployedSafeProps,
-      provider,
-      isL1SafeSingleton,
-    })
+    const contractNetworks = getTronContractNetworks(chain.chainId)
+    // Safe.init accepts string URL or Eip1193Provider.
+    // For Tron: use the RPC URL string so the SDK creates its own provider.
+    // For other chains: use the wallet's EIP-1193 provider directly.
+    const sdkProvider = isTronChain(chain.chainId) ? getRpcServiceUrl(chain.rpcUri) : provider
 
-    const creationTx = await safe.createSafeDeploymentTransaction()
+    // Safe.init makes RPC calls for contract verification. On Tron, TronGrid
+    // may rate-limit (429) these calls, so retry with backoff.
+    const initWithRetry = async (attempts = 3) => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const safe = await Safe.init({
+            predictedSafe: undeployedSafeProps,
+            provider: sdkProvider as string | Eip1193Provider,
+            isL1SafeSingleton,
+            ...(contractNetworks ? { contractNetworks } : {}),
+          })
+          return safe.createSafeDeploymentTransaction()
+        } catch (err) {
+          if (i === attempts - 1) throw err
+          // Wait before retrying (3s, 6s)
+          await new Promise((r) => setTimeout(r, (i + 1) * 3000))
+        }
+      }
+      throw new Error('Safe.init failed after retries')
+    }
+
+    const creationTx = await initWithRetry()
 
     const signer = await createWeb3(provider).getSigner()
 

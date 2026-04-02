@@ -88,6 +88,28 @@ const TronLinkModule = (chainId: Chain['chainId'], rpcUri: Chain['rpcUri']): Wal
         }
 
         const _rpcUrl = getRpcServiceUrl(rpcUri as Parameters<typeof getRpcServiceUrl>[0])
+
+        // TronLink extension injects TRON-PRO-API-KEY as a top-level key in axios
+        // defaults.headers. The /wallet/* CORS policy doesn't allow this custom header,
+        // so the browser blocks ALL POST requests to native Tron API endpoints.
+        // Fix: remove the header via axios request interceptor (persists across navigations)
+        // and also delete it from defaults for immediate effect.
+        const twProviders = [(tronWeb as any).fullNode, (tronWeb as any).solidityNode, (tronWeb as any).eventServer]
+        for (const provider of twProviders) {
+          if (provider?.instance?.defaults?.headers) {
+            delete provider.instance.defaults.headers['TRON-PRO-API-KEY']
+          }
+          // Add interceptor to strip the header on every request in case TronLink re-injects it
+          if (provider?.instance?.interceptors?.request) {
+            provider.instance.interceptors.request.use((config: any) => {
+              if (config?.headers) {
+                delete config.headers['TRON-PRO-API-KEY']
+              }
+              return config
+            })
+          }
+        }
+
         const chainChangedListeners = new Set<(chainId: string) => void>()
 
         // Import and create viem-transport backed provider

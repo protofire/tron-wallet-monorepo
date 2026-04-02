@@ -83,6 +83,13 @@ export const isSmartContractWallet = memoize(
 export const isWalletUnlocked = async (walletName: string): Promise<boolean | undefined> => {
   if ([PRIVATE_KEY_MODULE_LABEL, WALLETCONNECT].includes(walletName)) return true
 
+  // TronLink: check if the extension is available and has a connected address
+  if (walletName === 'TronLink') {
+    if (typeof window === 'undefined') return false
+    const tw = window.tronLink?.tronWeb || window.tronWeb
+    return tw?.ready && !!tw?.defaultAddress?.hex
+  }
+
   const METAMASK_LIKE = ['MetaMask', 'Rabby Wallet', 'Zerion', 'Ambire']
 
   // Only MetaMask exposes a method to check if the wallet is unlocked

@@ -128,10 +128,15 @@ export const initSafeSDK = async ({
     }
   }
 
+  // Safe.init accepts a string URL (not FetchRequest). Use the plain RPC URL.
+  // The API key header is only needed for ethers JsonRpcProvider (createWeb3ReadOnly),
+  // not for the Protocol Kit which creates its own provider internally.
+  const rpcUrl = provider._getConnection().url
+
   if (undeployedSafe) {
     if (isPredictedSafeProps(undeployedSafe.props) || isReplayedSafeProps(undeployedSafe.props)) {
       return Safe.init({
-        provider: provider._getConnection().url,
+        provider: rpcUrl,
         isL1SafeSingleton,
         ...(contractNetworks ? { contractNetworks } : {}),
         predictedSafe: undeployedSafe.props,
@@ -142,7 +147,7 @@ export const initSafeSDK = async ({
   }
 
   return Safe.init({
-    provider: provider._getConnection().url,
+    provider: rpcUrl,
     safeAddress: address,
     isL1SafeSingleton,
     ...(contractNetworks ? { contractNetworks } : {}),

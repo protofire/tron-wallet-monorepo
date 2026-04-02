@@ -66,6 +66,7 @@ import { selectRpc } from '@/store/settingsSlice'
 import { AppRoutes } from '@/config/routes'
 import type { CreateSafeResult, ReplayedSafeProps } from '@safe-global/utils/features/counterfactual/store/types'
 import { createWeb3ReadOnly } from '@/hooks/wallets/web3'
+import { isTronChain } from '@/utils/tron'
 import { updateAddressBook } from '../../logic/address-book'
 import {
   FEATURES,
@@ -186,7 +187,10 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
   const [executionMethod, setExecutionMethod] = useState(ExecutionMethod.RELAY)
   const [isCreating, setIsCreating] = useState<boolean>(false)
   const [submitError, setSubmitError] = useState<string>()
-  const isCounterfactualEnabled = useHasFeature(FEATURES.COUNTERFACTUAL)
+  const _hasCounterfactualFeature = useHasFeature(FEATURES.COUNTERFACTUAL)
+  // Disable counterfactual for Tron — the post-creation flow can't reliably
+  // show undeployed Safe info before CGW indexes it.
+  const isCounterfactualEnabled = isTronChain(chain?.chainId ?? '') ? false : _hasCounterfactualFeature
   const isEIP1559 = chain && hasFeature(chain, FEATURES.EIP1559)
   const { showGasFeeEstimation, showInsufficientFundsWarning, showFeeInConfirmationText } = chain
     ? getNativeTokenDisplay(chain)
@@ -251,15 +255,23 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
 
       setIsCreating(true)
 
-      // Figure out the shared available nonce across chains
-      // Always validate — even user-provided nonces may collide with existing deployments
-      const startingNonce = (data.saltNonce ?? 0).toString()
-      const nextAvailableNonce = await getAvailableSaltNonce(
-        customRPCs,
-        { ...newSafeProps, saltNonce: startingNonce },
-        data.networks,
-        knownAddresses,
-      )
+      // For Tron: use timestamp as salt nonce to avoid the RPC-heavy iteration loop.
+      // getAvailableSaltNonce makes 3+ RPC calls per iteration and recurses until it
+      // finds an unused address, which causes rate limiting on TronGrid.
+      // For non-Tron: use the standard nonce validation flow.
+      const isTron = data.networks.some((n) => isTronChain(n.chainId))
+      let nextAvailableNonce: string
+      if (isTron) {
+        nextAvailableNonce = (data.saltNonce ?? Date.now()).toString()
+      } else {
+        const startingNonce = (data.saltNonce ?? 0).toString()
+        nextAvailableNonce = await getAvailableSaltNonce(
+          customRPCs,
+          { ...newSafeProps, saltNonce: startingNonce },
+          data.networks,
+          knownAddresses,
+        )
+      }
 
       const replayedSafeWithNonce = { ...newSafeProps, saltNonce: nextAvailableNonce }
 
@@ -382,6 +394,7 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
       }
     } catch (_err) {
       const error = asError(_err)
+      console.error('[Safe Creation]', error.message)
       const submitError = isWalletRejection(error)
         ? 'User rejected signing.'
         : 'Error creating the Safe Account. Please try again later.'
