@@ -27,6 +27,7 @@ export const CreateSafeStatus = ({
   setStepData,
 }: StepRenderProps<NewSafeFormData>) => {
   const [status, setStatus] = useState<SafeCreationEvent>(SafeCreationEvent.PROCESSING)
+  const [createdSafeAddress, setCreatedSafeAddress] = useState<string>()
   const [safeAddress, pendingSafe] = useUndeployedSafe()
   const router = useRouter()
   const chain = useCurrentChain()
@@ -38,8 +39,12 @@ export const CreateSafeStatus = ({
 
   useEffect(() => {
     const unsubFns = Object.entries(safeCreationPendingStatuses).map(([event]) =>
-      safeCreationSubscribe(event as SafeCreationEvent, async () => {
+      safeCreationSubscribe(event as SafeCreationEvent, async (detail) => {
         setStatus(event as SafeCreationEvent)
+
+        if ((event === SafeCreationEvent.SUCCESS || event === SafeCreationEvent.INDEXED) && 'safeAddress' in detail) {
+          setCreatedSafeAddress(detail.safeAddress)
+        }
       }),
     )
 
@@ -49,15 +54,16 @@ export const CreateSafeStatus = ({
   }, [])
 
   useEffect(() => {
-    if (!chain || !safeAddress) return
+    const resolvedAddress = createdSafeAddress || safeAddress
+    if (!chain || !resolvedAddress) return
 
-    if (status === SafeCreationEvent.SUCCESS) {
-      const redirect = getRedirect(chain.shortName, safeAddress, router.query?.safeViewRedirectURL)
+    if (status === SafeCreationEvent.INDEXED) {
+      const redirect = getRedirect(chain.shortName, resolvedAddress, router.query?.safeViewRedirectURL)
       if (typeof redirect !== 'string' || redirect.startsWith('/')) {
         router.push(redirect)
       }
     }
-  }, [dispatch, chain, data.name, data.owners, data.threshold, router, safeAddress, status])
+  }, [dispatch, chain, data.name, data.owners, data.threshold, router, safeAddress, createdSafeAddress, status])
 
   useEffect(() => {
     if (!setProgressColor) return

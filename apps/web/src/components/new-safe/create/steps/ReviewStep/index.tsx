@@ -187,10 +187,7 @@ const ReviewStep = ({ data, onSubmit, onBack, setStep }: StepRenderProps<NewSafe
   const [executionMethod, setExecutionMethod] = useState(ExecutionMethod.RELAY)
   const [isCreating, setIsCreating] = useState<boolean>(false)
   const [submitError, setSubmitError] = useState<string>()
-  const _hasCounterfactualFeature = useHasFeature(FEATURES.COUNTERFACTUAL)
-  // Disable counterfactual for Tron — the post-creation flow can't reliably
-  // show undeployed Safe info before CGW indexes it.
-  const isCounterfactualEnabled = isTronChain(chain?.chainId ?? '') ? false : _hasCounterfactualFeature
+  const isCounterfactualEnabled = useHasFeature(FEATURES.COUNTERFACTUAL)
   const isEIP1559 = chain && hasFeature(chain, FEATURES.EIP1559)
   const { showGasFeeEstimation, showInsufficientFundsWarning, showFeeInConfirmationText } = chain
     ? getNativeTokenDisplay(chain)

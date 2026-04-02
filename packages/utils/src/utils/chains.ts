@@ -106,12 +106,16 @@ export const getNativeTokenDisplay = (chain: Pick<Chain, 'features'>): NativeTok
   return hasFeature(chain, FEATURES.HIDE_NATIVE_TOKEN) ? HIDE_NATIVE : NATIVE_TOKEN_DISPLAY_DEFAULT
 }
 
+// Tron block explorers don't accept 0x-prefixed hashes/addresses
+const TRON_CHAIN_IDS: ReadonlySet<string> = new Set(['2494104990', '728126428', '3448148188'])
+
 export const getBlockExplorerLink = (
-  chain: Pick<Chain, 'blockExplorerUriTemplate'>,
+  chain: Pick<Chain, 'blockExplorerUriTemplate' | 'chainId'>,
   address: string,
 ): { href: string; title: string } | undefined => {
   if (chain.blockExplorerUriTemplate) {
-    return getExplorerLink(address, chain.blockExplorerUriTemplate)
+    const hash = TRON_CHAIN_IDS.has(chain.chainId) ? address.replace(/^0x/, '') : address
+    return getExplorerLink(hash, chain.blockExplorerUriTemplate)
   }
 }
 /** This version is used if a network does not have the LATEST_SAFE_VERSION deployed yet */
