@@ -1,33 +1,33 @@
+import { utils as tronWebUtils } from 'tronweb'
+
 const TRON_CHAIN_IDS = ['2494104990', '728126428', '3448148188'] as const
 
 export const isTronChain = (chainId: string): boolean =>
   TRON_CHAIN_IDS.includes(chainId as (typeof TRON_CHAIN_IDS)[number])
 
 /**
- * Synchronous 0x → base58 conversion using TronLink's window.tronWeb.
- * Falls back to 0x if TronLink is not available.
+ * Synchronous 0x → base58 conversion using the bundled TronWeb util.
+ * Independent of window.tronWeb / TronLink injection timing, so first paint
+ * after a page refresh shows the correct base58 (T...) format.
+ * Falls back to the input on conversion failure.
  */
 export const toTronBase58Sync = (hexAddr: string): string => {
   try {
-    const tronWeb = window.tronWeb
-    if (!tronWeb?.address?.fromHex) return hexAddr
     // TronWeb expects hex with 41 prefix
     const raw = '41' + hexAddr.replace(/^0x/, '')
-    return tronWeb.address.fromHex(raw)
+    return tronWebUtils.address.fromHex(raw)
   } catch {
     return hexAddr
   }
 }
 
 /**
- * Synchronous base58 → 0x conversion using TronLink's window.tronWeb.
- * Falls back to the original value if TronLink is not available.
+ * Synchronous base58 → 0x conversion using the bundled TronWeb util.
+ * Independent of window.tronWeb. Falls back to the input on failure.
  */
 export const fromTronBase58Sync = (base58Addr: string): string => {
   try {
-    const tronWeb = window.tronWeb
-    if (!tronWeb?.address?.toHex) return base58Addr
-    const hex = tronWeb.address.toHex(base58Addr)
+    const hex = tronWebUtils.address.toHex(base58Addr)
     // TronWeb returns hex with 41 prefix, convert to 0x
     return '0x' + hex.slice(2)
   } catch {

@@ -20378,12 +20378,12 @@ __metadata:
 
 "@wirexapp/viem-transport@file:./wirexapp-viem-transport-1.4.0.tgz::locator=%40safe-global%2Fweb%40workspace%3Aapps%2Fweb":
   version: 1.4.0
-  resolution: "@wirexapp/viem-transport@file:./wirexapp-viem-transport-1.4.0.tgz#./wirexapp-viem-transport-1.4.0.tgz::hash=595dd8&locator=%40safe-global%2Fweb%40workspace%3Aapps%2Fweb"
+  resolution: "@wirexapp/viem-transport@file:./wirexapp-viem-transport-1.4.0.tgz#./wirexapp-viem-transport-1.4.0.tgz::hash=ce985f&locator=%40safe-global%2Fweb%40workspace%3Aapps%2Fweb"
   dependencies:
     "@safe-global/protocol-kit": "npm:^6.1.1"
     tronweb: "npm:^6.0.4"
     viem: "npm:^2.37.8"
-  checksum: 10/ea10756628ac9b5eb4c5b424718e0a5d843e79eaf06accea67e7bafb4084e8fbd7dcf45ac18d52e893be0bf84afb0267c2962016f622e49dee874f08a5b705d4
+  checksum: 10/189df4154140b333638aacfbdb56b14f41042f09296c62941e43d464238b6d82ad1a9a4e28b70c787ebc9c04fdb297ffb68a38b2ec296ed62409486540028aa5
   languageName: node
   linkType: hard
 
