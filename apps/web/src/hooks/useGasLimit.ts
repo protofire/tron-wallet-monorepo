@@ -18,11 +18,18 @@ import {
 import { isTronChain } from '@/utils/tron'
 
 /**
- * Default gas limit for Tron chains (display only).
- * Tron /jsonrpc returns unreliable results for eth_estimateGas.
- * The actual energy/bandwidth limits are handled by viem-transport.
+ * Display-only gas limit (energy units) for Tron Safe execTransaction-class
+ * calls. Tron /jsonrpc does not support reliable eth_estimateGas, so we use
+ * a constant tuned to typical Safe owner-management ops (addOwnerWithThreshold,
+ * swapOwner, changeThreshold) which consume ~20-25k energy. Combined with
+ * the 420 sun/energy display price in useGasPrice this renders ~10.5 TRX,
+ * matching the TronLink signing popup within a small upper-bound margin
+ * (BUG-07 / GSD-12881 — previous 50_000 yielded an over-estimate of 21 TRX).
+ * Real energy consumption is computed and burned at execution time by
+ * viem-transport via triggerConstantContract; this constant is purely a
+ * pre-sign UI hint.
  */
-const TRON_DEFAULT_GAS_LIMIT = 50_000n
+const TRON_DEFAULT_GAS_LIMIT = 25_000n
 
 const useGasLimit = (
   safeTx?: SafeTransaction,
