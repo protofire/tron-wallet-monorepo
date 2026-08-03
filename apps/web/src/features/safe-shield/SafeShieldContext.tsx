@@ -10,6 +10,8 @@ import {
 } from 'react'
 import { useCounterpartyAnalysis, useRecipientAnalysis, useThreatAnalysis } from './hooks'
 import useUntrustedSafeAnalysis from './hooks/useUntrustedSafeAnalysis'
+import { useHasFeature } from '@/hooks/useChains'
+import { FEATURES } from '@/utils/featureToggled'
 import type { AsyncResult } from '@safe-global/utils/hooks/useAsync'
 import type { SafeTransaction } from '@safe-global/types-kit'
 import { SafeTxContext } from '@/components/tx-flow/SafeTxProvider'
@@ -64,6 +66,11 @@ export const SafeShieldProvider = ({ children }: { children: ReactNode }) => {
   // Safe-level analysis: untrusted Safe check
   const { safeAnalysis, addToTrustedList } = useUntrustedSafeAnalysis()
 
+  // The risk-confirmation checkbox is only rendered when RISK_MITIGATION is enabled.
+  // Without it there is no UI to acknowledge a risk, so its result must not block
+  // submission — otherwise Continue/Sign is permanently disabled (e.g. on Tron).
+  const isRiskMitigationEnabled = useHasFeature(FEATURES.RISK_MITIGATION)
+
   const [isRiskConfirmed, setIsRiskConfirmed] = useState(false)
 
   const { needsRiskConfirmation, primaryThreatSeverity } = useMemo(() => {
@@ -80,13 +87,13 @@ export const SafeShieldProvider = ({ children }: { children: ReactNode }) => {
 
     // Include Safe-level analysis and deadlock in risk confirmation
     const needsRiskConfirmation =
-      hasCriticalThreat || hasCriticalDeadlock || safeAnalysis?.severity === Severity.CRITICAL
+      !!isRiskMitigationEnabled && (hasCriticalThreat || hasCriticalDeadlock || safeAnalysis?.severity === Severity.CRITICAL)
 
     return {
       needsRiskConfirmation,
       primaryThreatSeverity: severity,
     }
-  }, [threatAnalysisResult, deadlockResults, safeAnalysis])
+  }, [threatAnalysisResult, deadlockResults, safeAnalysis, isRiskMitigationEnabled])
 
   useEffect(() => {
     setIsRiskConfirmed(false)

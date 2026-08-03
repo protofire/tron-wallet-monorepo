@@ -151,6 +151,11 @@ const usePendingSafeStatus = (): void => {
             trackEvent(CREATE_SAFE_EVENTS.ACTIVATED_SAFE)
           }
 
+          // The Safe is already deployed on-chain, so drop the undeployed record
+          // immediately instead of waiting for CGW indexing (which can lag on Tron).
+          // Otherwise the UI stays on "activating" and hides signing controls.
+          dispatch(removeUndeployedSafe({ chainId: creationChainId, address: detail.safeAddress }))
+
           pollSafeInfo(creationChainId, detail.safeAddress).finally(() => {
             safeCreationDispatch(SafeCreationEvent.INDEXED, {
               groupKey: detail.groupKey,
