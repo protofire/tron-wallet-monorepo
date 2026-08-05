@@ -1,9 +1,6 @@
 import { utils as tronWebUtils } from 'tronweb'
 
-const TRON_CHAIN_IDS = ['2494104990', '728126428', '3448148188'] as const
-
-export const isTronChain = (chainId: string): boolean =>
-  TRON_CHAIN_IDS.includes(chainId as (typeof TRON_CHAIN_IDS)[number])
+export { isTronChain } from './tron-chains'
 
 /**
  * Synchronous 0x → base58 conversion using the bundled TronWeb util.

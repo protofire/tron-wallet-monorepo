@@ -95,5 +95,46 @@ describe('wallets', () => {
 
       expect(result).toBe(false)
     })
+
+    describe('on Tron chains', () => {
+      const TRON_SHASTA_CHAIN_ID = '2494104990'
+
+      afterEach(() => {
+        jest.useRealTimers()
+      })
+
+      it('should return true for smart contracts with a single getCode call (no EIP-7702 check)', async () => {
+        getCodeMock.mockResolvedValue('0x608060405234801561001057600080fd5b5')
+
+        const result = await isSmartContractWallet(TRON_SHASTA_CHAIN_ID, toBeHex('0x1', 20))
+
+        expect(result).toBe(true)
+        expect(getCodeMock).toHaveBeenCalledTimes(1)
+      })
+
+      it('should retry after a fetch failure and return the successful result', async () => {
+        jest.useFakeTimers()
+        getCodeMock
+          .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+          .mockResolvedValueOnce('0x608060405234801561001057600080fd5b5')
+
+        const promise = isSmartContractWallet(TRON_SHASTA_CHAIN_ID, toBeHex('0x1', 20))
+        await jest.runAllTimersAsync()
+
+        expect(await promise).toBe(true)
+        expect(getCodeMock).toHaveBeenCalledTimes(2)
+      })
+
+      it('should fall back to EOA when all attempts fail', async () => {
+        jest.useFakeTimers()
+        getCodeMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
+        const promise = isSmartContractWallet(TRON_SHASTA_CHAIN_ID, toBeHex('0x1', 20))
+        await jest.runAllTimersAsync()
+
+        expect(await promise).toBe(false)
+        expect(getCodeMock).toHaveBeenCalledTimes(3)
+      })
+    })
   })
 })

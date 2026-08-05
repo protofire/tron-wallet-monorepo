@@ -5,6 +5,7 @@ import { WALLET_KEYS } from '@/hooks/wallets/consts'
 // Inlined to avoid importing from protocol-kit which has heavy dependencies
 const EMPTY_DATA = '0x'
 import memoize from 'lodash/memoize'
+import { isTronChain } from '@/utils/tron-chains'
 import { PRIVATE_KEY_MODULE_LABEL } from '@/services/private-key-module/constants'
 import { type JsonRpcProvider } from 'ethers'
 
@@ -70,8 +71,30 @@ export const isEIP7702DelegatedAccount = async (address: string, provider?: Json
   return code.startsWith(EIP_7702_DELEGATED_ACCOUNT_PREFIX)
 }
 
+const TRON_GET_CODE_ATTEMPTS = 3
+const TRON_GET_CODE_BACKOFF_MS = 1500
+
+// TronGrid may 429 without CORS headers, which the browser surfaces as a
+// generic fetch failure. Retry with backoff and assume an EOA if all attempts
+// fail — TronLink signers are EOAs, and throwing here would block the whole
+// signing/execution flow.
+const isTronSmartContractWallet = async (address: string): Promise<boolean> => {
+  for (let attempt = 0; attempt < TRON_GET_CODE_ATTEMPTS; attempt++) {
+    try {
+      return await isSmartContract(address)
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * TRON_GET_CODE_BACKOFF_MS))
+    }
+  }
+  return false
+}
+
 export const isSmartContractWallet = memoize(
-  async (_chainId: string, address: string): Promise<boolean> => {
+  async (chainId: string, address: string): Promise<boolean> => {
+    // No EIP-7702 on Tron; a single guarded getCode call avoids TronGrid rate limits
+    if (isTronChain(chainId)) {
+      return isTronSmartContractWallet(address)
+    }
     const isContract = await isSmartContract(address)
     const isEIP7702 = await isEIP7702DelegatedAccount(address)
     return isContract && !isEIP7702
